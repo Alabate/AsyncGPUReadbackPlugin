@@ -8,7 +8,7 @@ extern "C" {
 	}
 
 	int PrintANumber(){
-		return 5;
+		return 42;
 	}
 
 	int AddTwoIntegers(int a, int b) {
