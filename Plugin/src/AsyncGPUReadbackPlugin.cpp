@@ -3,20 +3,16 @@
 */
 
 extern "C" {
-	const char* PrintHello(){
-		return "Hello";
+
+	/**
+	 * Check if plugin is compatible with this system
+	 */
+	bool IsCompatible() {
+		return true;
 	}
 
 	int PrintANumber(){
 		return 42;
-	}
-
-	int AddTwoIntegers(int a, int b) {
-		return a + b;
-	}
-
-	float AddTwoFloats(float a, float b) {
-		return a + b;
 	}
 }
 
