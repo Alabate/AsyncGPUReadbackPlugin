@@ -112,6 +112,22 @@ public class AsyncGPUReadbackPluginRequest
 			}
 	}
 
+	/// <summary>
+	/// Has to be called regularly to update request status.
+	/// Call this from Update() or from a corountine
+	/// </summary>
+	/// <param name="force">Update is automatic on official api,
+	/// so we don't call the Update() method except on force mode.</param>
+	public void Update(bool force = false)
+	{
+		if (usePlugin) {
+			// ?
+		}
+		else if(force) {
+			gpuRequest.Update();
+		}
+	}
+
 	
 	[DllImport ("AsyncGPUReadbackPlugin")]
 	private static extern bool IsCompatible();

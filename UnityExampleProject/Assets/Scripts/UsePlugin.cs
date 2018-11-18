@@ -24,6 +24,7 @@ public class UsePlugin : MonoBehaviour {
         while (_requests.Count > 0)
         {
             var req = _requests.Peek();
+			req.Update();
 
             if (req.hasError)
             {
