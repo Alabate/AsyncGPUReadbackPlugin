@@ -88,7 +88,8 @@ public class AsyncGPUReadbackPluginRequest
 		}
 		else if(IsCompatible()) {
 			usePlugin = true;
-			//int textureId = (int)src.GetNativeTexturePtr();
+
+			// int textureId = (int)src.GetNativeTexturePtr();
 			// TODO
 		}
 		else {
