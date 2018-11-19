@@ -269,14 +269,3 @@ extern "C" void UNITY_INTERFACE_API dispose_renderThread(int event_id) {
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfunction_dispose_renderThread() {
 	return dispose_renderThread;
 }
-
-
-extern "C" {
-
-	int PrintANumber(){
-		if (isCompatible())
-			return 43;
-		else
-			return 666;
-	}
-}
