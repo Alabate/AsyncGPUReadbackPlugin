@@ -4,6 +4,7 @@ using System;
 using System.Runtime.InteropServices;
 using UnityEngine.Rendering;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 public class AsyncGPUReadbackPlugin
 {
@@ -41,6 +42,11 @@ public class AsyncGPUReadbackPluginRequest
 	/// Official api request object used if supported
 	/// </summary>
 	private AsyncGPUReadbackRequest gpuRequest;
+
+	/// <summary>
+	/// Event Id used to tell what texture is targeted to the render thread
+	/// </summary>
+	private int eventId;
 
 	/// <summary>
 	/// Check if the request is done
@@ -86,11 +92,11 @@ public class AsyncGPUReadbackPluginRequest
 			usePlugin = false;
 			gpuRequest = AsyncGPUReadback.Request(src);
 		}
-		else if(IsCompatible()) {
+		else if(isCompatible()) {
 			usePlugin = true;
-
-			// int textureId = (int)src.GetNativeTexturePtr();
-			// TODO
+			int textureId = (int)(src.GetNativeTexturePtr());
+			this.eventId = makeRequest_mainThread(textureId, 0);
+			GL.IssuePluginEvent(getfunction_makeRequest_renderThread(), this.eventId);
 		}
 		else {
 			Debug.LogError("AsyncGPUReadback is not supported on your system.");
@@ -102,11 +108,18 @@ public class AsyncGPUReadbackPluginRequest
 	/// Warning layer id not supported on OpenGL
 	/// </summary>
 	/// <returns></returns>
-	public NativeArray<T> GetData<T>() where T : struct
+	public unsafe NativeArray<T> GetData<T>() where T : struct
 	{
 			if (usePlugin) {
-				// ?
-				return new NativeArray<T>();
+				uint size = getDataSize_mainThread(this.eventId);
+				byte[] buffer = new byte[size];
+				NativeArray<T> rtn;
+				fixed ( byte* p = buffer )
+ 				{
+					getData_mainThread(this.eventId, p, size);
+					rtn = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(p, (int)size, Allocator.Temp);
+				}
+				return rtn;
 			}
 			else {
 				return gpuRequest.GetData<T>();
@@ -122,14 +135,32 @@ public class AsyncGPUReadbackPluginRequest
 	public void Update(bool force = false)
 	{
 		if (usePlugin) {
-			// ?
+			GL.IssuePluginEvent(getfunction_update_renderThread(), this.eventId);
 		}
 		else if(force) {
 			gpuRequest.Update();
 		}
 	}
-
 	
+	// Destructor
+	~AsyncGPUReadbackPluginRequest()
+	{
+		GL.IssuePluginEvent(getfunction_dispose_renderThread(), this.eventId);
+	}
+
 	[DllImport ("AsyncGPUReadbackPlugin")]
-	private static extern bool IsCompatible();
+	private static extern bool isCompatible();
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static extern int makeRequest_mainThread(int texture, int miplevel);
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static extern IntPtr getfunction_makeRequest_renderThread();
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static extern IntPtr getfunction_update_renderThread();
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static extern uint getDataSize_mainThread(int event_id);
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static unsafe extern uint getData_mainThread(int event_id, byte* buffer, uint max_length);
+	[DllImport ("AsyncGPUReadbackPlugin")]
+	private static extern IntPtr getfunction_dispose_renderThread();
 }
+

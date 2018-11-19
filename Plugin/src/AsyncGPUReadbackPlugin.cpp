@@ -116,7 +116,7 @@ extern "C" int makeRequest_mainThread(GLuint texture, int miplevel) {
  * Has to be called by GL.IssuePluginEvent
  * @param event_id containing the the task index, given by makeRequest_mainThread
  */
-extern "C" void makeRequest_renderThread(int event_id) {
+extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	// Get task back
 	tasks_mutex.lock();
 	std::shared_ptr<Task> task = tasks[event_id];
@@ -161,13 +161,16 @@ extern "C" void makeRequest_renderThread(int event_id) {
 	// Done init
 	task->initialized = true;
 }
+extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfunction_makeRequest_renderThread() {
+	return makeRequest_renderThread;
+}
 
 /**
  * @brief check if data is ready
  * Has to be called by GL.IssuePluginEvent
  * @param event_id containing the the task index, given by makeRequest_mainThread
  */
-extern "C" void update_renderThread(int event_id) {
+extern "C" void UNITY_INTERFACE_API update_renderThread(int event_id) {
 	// Get task back
 	tasks_mutex.lock();
 	std::shared_ptr<Task> task = tasks[event_id];
@@ -204,6 +207,9 @@ extern "C" void update_renderThread(int event_id) {
 		// yeah task is done!
 		task->done = true;
 	}
+}
+extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfunction_update_renderThread() {
+	return update_renderThread;
 }
 
 extern "C" size_t getDataSize_mainThread(int event_id) {
@@ -243,7 +249,7 @@ extern "C" size_t getData_mainThread(int event_id, char* buffer, size_t max_leng
  * Has to be called by GL.IssuePluginEvent
  * @param event_id containing the the task index, given by makeRequest_mainThread
  */
-extern "C" size_t dispose_renderThread(int event_id) {
+extern "C" void UNITY_INTERFACE_API dispose_renderThread(int event_id) {
 	// Get task back
 	tasks_mutex.lock();
 	std::shared_ptr<Task> task = tasks[event_id];
@@ -260,8 +266,9 @@ extern "C" size_t dispose_renderThread(int event_id) {
 	tasks.erase(event_id);
 	tasks_mutex.unlock();
 }
-
-
+extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfunction_dispose_renderThread() {
+	return dispose_renderThread;
+}
 
 
 extern "C" {
