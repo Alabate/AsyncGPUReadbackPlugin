@@ -38,12 +38,37 @@ int next_event_id = 1;
 
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 
+void GLAPIENTRY
+MessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+	if (type == GL_DEBUG_TYPE_ERROR) {
+		std::ofstream outfile;
+		outfile.open("render.log", std::ios_base::app);
+		outfile << "GL CALLBACK: " << message  << std::endl;
+		outfile.close();
+	}
+}
+
+
 /**
  * Unity plugin load event
  */
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
     UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
+
+glEnable              ( GL_DEBUG_OUTPUT );
+glDebugMessageCallback( MessageCallback, 0 );
+
+
+
+
     unityInterfaces = unityInterfaces;
     graphics = unityInterfaces->Get<IUnityGraphics>();
         
@@ -124,12 +149,6 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	std::shared_ptr<Task> task = tasks[event_id];
 	tasks_mutex.unlock();
 
-	// Debug
-	{std::ofstream outfile;
-	outfile.open("render.log", std::ios_base::app);
-	outfile << "makeRequest 1. TextureId: " << task->texture << std::endl;
-	outfile.close();}
-
 	// Get texture informations
 	glBindTexture(GL_TEXTURE_2D, task->texture);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_WIDTH, &(task->width));
@@ -138,30 +157,12 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_INTERNAL_FORMAT, &(task->internal_format));
 	task->size = task->depth * task->width * task->height * getPixelSizeFromInternalFormat(task->internal_format);
 
-	// Debug
-	{std::ofstream outfile;
-	outfile.open("render.log", std::ios_base::app);
-	outfile << "makeRequest 2. size: " << task->size << std::endl;
-	outfile << "makeRequest 2. width: " << task->width << std::endl;
-	outfile << "makeRequest 2. height: " << task->height << std::endl;
-	outfile << "makeRequest 2. depth: " << task->depth << std::endl;
-	outfile << "makeRequest 2. internal_format: " << task->internal_format << std::endl;
-	outfile.close();}
-
 	// Allocate the final data buffer
 	task->data = task->allocator.allocate(task->size);
 
 	// Create the fbo (frame buffer object) from the given texture
 	task->fbo;
 	glGenFramebuffers(1, &(task->fbo));
-
-
-
-	// Debug
-	{std::ofstream outfile;
-	outfile.open("render.log", std::ios_base::app);
-	outfile << "makeRequest 3" << std::endl;
-	outfile.close();}
 
 	// Bind the texture to the fbo
 	glBindFramebuffer(GL_FRAMEBUFFER, task->fbo);
@@ -179,19 +180,11 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 
 	// Unbind buffers
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-	glBindBuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// Fence to know when it's ready
 	task->fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 	
-
-
-	// Debug
-	{std::ofstream outfile;
-	outfile.open("render.log", std::ios_base::app);
-	outfile << "makeRequest 4" << std::endl;
-	outfile.close();}
-
 	// Done init
 	task->initialized = true;
 }
@@ -224,9 +217,10 @@ extern "C" void UNITY_INTERFACE_API update_renderThread(int event_id) {
 		task->done = true;
 		return;
 	}
-	
+
 	// When it's done
 	if (status == GL_SIGNALED) {
+
 		// Bind back the pbo
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, task->pbo);
 
@@ -276,6 +270,32 @@ extern "C" size_t getData_mainThread(int event_id, char* buffer, size_t max_leng
 	// Check fence state
 	std::memcpy(buffer, task->data, task->size);
 	return task->size;
+}
+
+/**
+ * @brief Check if request is done
+ * @param event_id containing the the task index, given by makeRequest_mainThread
+ */
+extern "C" bool isRequestDone(int event_id) {
+	// Get task back
+	tasks_mutex.lock();
+	std::shared_ptr<Task> task = tasks[event_id];
+	tasks_mutex.unlock();
+
+	return task->done;
+}
+
+/**
+ * @brief Check if request is in error
+ * @param event_id containing the the task index, given by makeRequest_mainThread
+ */
+extern "C" bool isRequestError(int event_id) {
+	// Get task back
+	tasks_mutex.lock();
+	std::shared_ptr<Task> task = tasks[event_id];
+	tasks_mutex.unlock();
+
+	return task->error;
 }
 
 /**
