@@ -38,37 +38,12 @@ int next_event_id = 1;
 
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 
-void GLAPIENTRY
-MessageCallback( GLenum source,
-                 GLenum type,
-                 GLuint id,
-                 GLenum severity,
-                 GLsizei length,
-                 const GLchar* message,
-                 const void* userParam )
-{
-	if (type == GL_DEBUG_TYPE_ERROR) {
-		std::ofstream outfile;
-		outfile.open("render.log", std::ios_base::app);
-		outfile << "GL CALLBACK: " << message  << std::endl;
-		outfile.close();
-	}
-}
-
-
 /**
  * Unity plugin load event
  */
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
     UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
-
-glEnable              ( GL_DEBUG_OUTPUT );
-glDebugMessageCallback( MessageCallback, 0 );
-
-
-
-
     unityInterfaces = unityInterfaces;
     graphics = unityInterfaces->Get<IUnityGraphics>();
         
@@ -156,6 +131,14 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_DEPTH, &(task->depth));
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_INTERNAL_FORMAT, &(task->internal_format));
 	task->size = task->depth * task->width * task->height * getPixelSizeFromInternalFormat(task->internal_format);
+
+	// Check for errors
+	if (task->size == 0
+		|| getFormatFromInternalFormat(task->internal_format) == 0
+		|| getTypeFromInternalFormat(task->internal_format) == 0) {
+		task->error = true;
+		return;
+	}
 
 	// Allocate the final data buffer
 	task->data = task->allocator.allocate(task->size);

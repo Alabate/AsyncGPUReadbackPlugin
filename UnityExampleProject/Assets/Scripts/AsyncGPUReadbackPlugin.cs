@@ -10,7 +10,7 @@ using Unity.Collections.LowLevel.Unsafe;
 public class AsyncGPUReadbackPlugin
 {
 	/// <summary>
-	/// /// Create an AsyncGPUReadbackPluginRequest.
+	/// Create an AsyncGPUReadbackPluginRequest.
 	/// Use official AsyncGPUReadback.Request if possible.
 	/// If not, it tries to use OpenGL specific implementation
 	/// Warning! Can only be called from render thread yet (not main thread)
@@ -79,7 +79,6 @@ public class AsyncGPUReadbackPluginRequest
 	/// <param name="src"></param>
 	public AsyncGPUReadbackPluginRequest(Texture src)
 	{
-		Debug.Log("request.");
 		if (SystemInfo.supportsAsyncGPUReadback) {
 			usePlugin = false;
 			gpuRequest = AsyncGPUReadback.Request(src);
@@ -103,23 +102,21 @@ public class AsyncGPUReadbackPluginRequest
 	/// <returns></returns>
 	public unsafe NativeArray<T> GetData<T>() where T : struct
 	{
-			Debug.Log("Get data.");
-			if (usePlugin) {
-				// uint size = getDataSize_mainThread(this.eventId);
-				// byte[] buffer = new byte[size];
-				// getData_mainThread(this.eventId, buffer, size);
-				NativeArray<T> rtn = new NativeArray<T>();
-				// rtn = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>((byte*)buffer, (int)size, Allocator.Temp);
-				return rtn;
-			}
-			else {
-				return gpuRequest.GetData<T>();
-			}
+		if (usePlugin) {
+			// uint size = getDataSize_mainThread(this.eventId);
+			// byte[] buffer = new byte[size];
+			// getData_mainThread(this.eventId, buffer, size);
+			NativeArray<T> rtn = new NativeArray<T>();
+			// rtn = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>((byte*)buffer, (int)size, Allocator.Temp);
+			return rtn;
+		}
+		else {
+			return gpuRequest.GetData<T>();
+		}
 	}
 
 	public byte[] GetRawData()
 	{
-		Debug.Log("Get raw data .");
 		if (usePlugin) {
 			uint size = getDataSize_mainThread(this.eventId);
 			byte[] buffer = new byte[size];
@@ -139,7 +136,6 @@ public class AsyncGPUReadbackPluginRequest
 	/// so we don't call the Update() method except on force mode.</param>
 	public void Update(bool force = false)
 	{
-		Debug.Log("Update.");
 		if (usePlugin) {
 			GL.IssuePluginEvent(getfunction_update_renderThread(), this.eventId);
 		}
@@ -147,14 +143,14 @@ public class AsyncGPUReadbackPluginRequest
 			gpuRequest.Update();
 		}
 	}
-	
+
 	// Destructor
 	~AsyncGPUReadbackPluginRequest()
 	{
-		Debug.Log("Clean.");
 		// GL.IssuePluginEvent(getfunction_dispose_renderThread(), this.eventId);
 		getfunction_dispose_renderThread();
 	}
+
 
 	[DllImport ("AsyncGPUReadbackPlugin")]
 	private static extern bool isCompatible();

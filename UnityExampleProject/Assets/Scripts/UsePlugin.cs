@@ -12,37 +12,7 @@ using System.IO;
 public class UsePlugin : MonoBehaviour {
 
 	Queue<AsyncGPUReadbackPluginRequest> _requests = new Queue<AsyncGPUReadbackPluginRequest>();
-    Camera cam;
-    int pixelHeight;
-    int pixelWidth;
-    RenderTexture renderTexture;
 	
-    void Start()
-    {
-        cam = GetComponent<Camera>();
-        pixelHeight = cam.pixelHeight;
-        pixelWidth = cam.pixelWidth;
-
-        renderTexture = new RenderTexture(pixelWidth, pixelHeight, 0, RenderTextureFormat.ARGB32)
-        {
-            antiAliasing = 1,
-            autoGenerateMips = true,
-            dimension = UnityEngine.Rendering.TextureDimension.Tex2D,
-            volumeDepth = 1
-        };
-        renderTexture.Create();
-        cam.targetTexture = renderTexture;
-        StartCoroutine(triggerRender());
-    }
-
-    IEnumerator triggerRender()
-    {
-        while (true) {
-            cam.Render();
-            yield return new WaitForSeconds(1.0f);
-        }
-    }
-
 	void Update()
     {
         while (_requests.Count > 0)
@@ -57,8 +27,10 @@ public class UsePlugin : MonoBehaviour {
             }
             else if (req.done)
             {
-                Debug.Log("<Done.");
-                SaveBitmap(req.GetRawData(), pixelWidth, pixelHeight);
+                if (Time.frameCount % 60 == 0) {
+                    Camera cam = GetComponent<Camera>();
+                    SaveBitmap(req.GetRawData(), cam.pixelWidth, cam.pixelHeight);
+                }
                 _requests.Dequeue();
             }
             else
@@ -70,24 +42,17 @@ public class UsePlugin : MonoBehaviour {
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        Debug.Log("<Request: " + source.format);
         if (_requests.Count < 8)
             _requests.Enqueue(AsyncGPUReadbackPlugin.Request(source));
         else
-            Debug.Log("Too many requests.");
+            Debug.LogWarning("Too many requests.");
 
         Graphics.Blit(source, destination);
     }
 
     void SaveBitmap(byte[] buffer, int width, int height)
     {
-        Debug.LogError("Write to file." + buffer.Length);
-        String dbg = "";
-        for(int i = 0 ; i < 10 ; i++) {
-            dbg += String.Format("{0:X}", buffer[i]);
-        }
-        Debug.Log("Write to file: " + dbg);
-
+        Debug.Log("Write to file");
         var tex = new Texture2D(width, height, TextureFormat.RGBAHalf, false);
         tex.LoadRawTextureData(buffer);
         tex.Apply();
