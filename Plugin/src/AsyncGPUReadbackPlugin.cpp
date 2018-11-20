@@ -5,6 +5,8 @@
 #include <cstring>
 #include "Unity/IUnityInterface.h"
 #include "Unity/IUnityGraphics.h"
+#include <iostream>
+#include <fstream>
 
 #include "TypeHelpers.hpp"
 
@@ -122,6 +124,12 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	std::shared_ptr<Task> task = tasks[event_id];
 	tasks_mutex.unlock();
 
+	// Debug
+	{std::ofstream outfile;
+	outfile.open("render.log", std::ios_base::app);
+	outfile << "makeRequest 1. TextureId: " << task->texture << std::endl;
+	outfile.close();}
+
 	// Get texture informations
 	glBindTexture(GL_TEXTURE_2D, task->texture);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_WIDTH, &(task->width));
@@ -130,12 +138,30 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, task->miplevel, GL_TEXTURE_INTERNAL_FORMAT, &(task->internal_format));
 	task->size = task->depth * task->width * task->height * getPixelSizeFromInternalFormat(task->internal_format);
 
+	// Debug
+	{std::ofstream outfile;
+	outfile.open("render.log", std::ios_base::app);
+	outfile << "makeRequest 2. size: " << task->size << std::endl;
+	outfile << "makeRequest 2. width: " << task->width << std::endl;
+	outfile << "makeRequest 2. height: " << task->height << std::endl;
+	outfile << "makeRequest 2. depth: " << task->depth << std::endl;
+	outfile << "makeRequest 2. internal_format: " << task->internal_format << std::endl;
+	outfile.close();}
+
 	// Allocate the final data buffer
 	task->data = task->allocator.allocate(task->size);
 
 	// Create the fbo (frame buffer object) from the given texture
 	task->fbo;
 	glGenFramebuffers(1, &(task->fbo));
+
+
+
+	// Debug
+	{std::ofstream outfile;
+	outfile.open("render.log", std::ios_base::app);
+	outfile << "makeRequest 3" << std::endl;
+	outfile.close();}
 
 	// Bind the texture to the fbo
 	glBindFramebuffer(GL_FRAMEBUFFER, task->fbo);
@@ -158,6 +184,14 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 	// Fence to know when it's ready
 	task->fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 	
+
+
+	// Debug
+	{std::ofstream outfile;
+	outfile.open("render.log", std::ios_base::app);
+	outfile << "makeRequest 4" << std::endl;
+	outfile.close();}
+
 	// Done init
 	task->initialized = true;
 }
