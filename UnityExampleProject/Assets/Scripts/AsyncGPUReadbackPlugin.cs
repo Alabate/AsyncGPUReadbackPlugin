@@ -95,36 +95,19 @@ public class AsyncGPUReadbackPluginRequest
 		}
 	}
 
-	/// <summary>
-	/// Fetches the data of a successful request.
-	/// Warning layer id not supported on OpenGL
-	/// </summary>
-	/// <returns></returns>
-	public unsafe NativeArray<T> GetData<T>() where T : struct
+	public NativeArray<byte> GetRawData()
 	{
 		if (usePlugin) {
-			// uint size = getDataSize_mainThread(this.eventId);
-			// byte[] buffer = new byte[size];
-			// getData_mainThread(this.eventId, buffer, size);
-			NativeArray<T> rtn = new NativeArray<T>();
-			// rtn = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>((byte*)buffer, (int)size, Allocator.Temp);
-			return rtn;
-		}
-		else {
-			return gpuRequest.GetData<T>();
-		}
-	}
 
-	public byte[] GetRawData()
-	{
-		if (usePlugin) {
-			uint size = getDataSize_mainThread(this.eventId);
-			byte[] buffer = new byte[size];
-			getData_mainThread(this.eventId, buffer, size);
+			data* ptr = null;
+			uint length = 0;
+			NativeArray<byte> buffer = getData_mainThread(this.eventId, ref ptr, ref size);
+			NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray(ptr, size, Allocator.Temp);
+			
 			return buffer;
 		}
 		else {
-			return gpuRequest.GetData<byte>().ToArray();
+			return gpuRequest.GetData<byte>();
 		}
 	}
 
@@ -148,7 +131,7 @@ public class AsyncGPUReadbackPluginRequest
 	~AsyncGPUReadbackPluginRequest()
 	{
 		// GL.IssuePluginEvent(getfunction_dispose_renderThread(), this.eventId);
-		getfunction_dispose_renderThread();
+		// getfunction_dispose_renderThread();
 	}
 
 
@@ -163,11 +146,7 @@ public class AsyncGPUReadbackPluginRequest
 	[DllImport ("AsyncGPUReadbackPlugin")]
 	private static extern IntPtr getfunction_update_renderThread();
 	[DllImport ("AsyncGPUReadbackPlugin")]
-	private static extern uint getDataSize_mainThread(int event_id);
-	[DllImport ("AsyncGPUReadbackPlugin")]
-	private static extern uint getData_mainThread(int event_id, byte[] buffer, uint max_length);
-	[DllImport ("AsyncGPUReadbackPlugin")]
-	private static extern IntPtr getfunction_dispose_renderThread();
+	private static extern uint getData_mainThread(int event_id, ref byte* buffer, ref uint length);
 	[DllImport ("AsyncGPUReadbackPlugin")]
 	private static extern bool isRequestError(int event_id);
 	[DllImport ("AsyncGPUReadbackPlugin")]

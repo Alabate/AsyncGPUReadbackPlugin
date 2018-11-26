@@ -18,8 +18,7 @@ struct Task {
 	bool initialized = false;
 	bool error = false;
 	bool done = false;
-	char* data;
-	std::allocator<char> allocator;
+	void* data;
 	int miplevel;
 	int size;
 	int height;
@@ -140,8 +139,8 @@ extern "C" void UNITY_INTERFACE_API makeRequest_renderThread(int event_id) {
 		return;
 	}
 
-	// Allocate the final data buffer
-	task->data = task->allocator.allocate(task->size);
+	// Allocate the final data buffer !!! WARNING: free, will have to be done on script side !!!!
+	task->data = std::malloc(task->size);
 
 	// Create the fbo (frame buffer object) from the given texture
 	task->fbo;
@@ -215,6 +214,11 @@ extern "C" void UNITY_INTERFACE_API update_renderThread(int event_id) {
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
+		// Clear buffers
+		glDeleteFramebuffers(1, &(task->fbo));
+		glDeleteBuffers(1, &(task->pbo));
+		glDeleteSync(task->fence);
+
 		// yeah task is done!
 		task->done = true;
 	}
@@ -223,23 +227,11 @@ extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfun
 	return update_renderThread;
 }
 
-extern "C" size_t getDataSize_mainThread(int event_id) {
-	// Get task back
-	tasks_mutex.lock();
-	std::shared_ptr<Task> task = tasks[event_id];
-	tasks_mutex.unlock();
-
-	if (!task->done) {
-		return 0;
-	}
-	return task->size;
-}
-
 /**
  * @brief Get data from the main thread
  * @param event_id containing the the task index, given by makeRequest_mainThread
  */
-extern "C" size_t getData_mainThread(int event_id, char* buffer, size_t max_length) {
+extern "C" void getData_mainThread(int event_id, void** buffer, size_t* length) {
 	// Get task back
 	tasks_mutex.lock();
 	std::shared_ptr<Task> task = tasks[event_id];
@@ -247,12 +239,12 @@ extern "C" size_t getData_mainThread(int event_id, char* buffer, size_t max_leng
 
 	// Do something only if initialized (thread safety)
 	if (!task->done) {
-		return 0;
+		return;
 	}
 
-	// Check fence state
-	std::memcpy(buffer, task->data, task->size);
-	return task->size;
+	// Copy the pointer. Warning: free will have to be done on script side
+	*length = task->size;
+	*buffer = task->data;
 }
 
 /**
@@ -283,26 +275,15 @@ extern "C" bool isRequestError(int event_id) {
 
 /**
  * @brief clear data for a frame
+ * Warning : Buffer is never cleaned, it has to be cleaned from script side 
  * Has to be called by GL.IssuePluginEvent
  * @param event_id containing the the task index, given by makeRequest_mainThread
  */
-extern "C" void UNITY_INTERFACE_API dispose_renderThread(int event_id) {
-	// Get task back
-	tasks_mutex.lock();
-	std::shared_ptr<Task> task = tasks[event_id];
-	tasks_mutex.unlock();
-
-	// Clear buffers
-	glDeleteFramebuffers(1, &(task->fbo));
-	glDeleteBuffers(1, &(task->pbo));
-	glDeleteSync(task->fence);
-	task->allocator.deallocate(task->data, task->size);
-
+extern "C" void dispose(int event_id) {
 	// Remove from tasks
 	tasks_mutex.lock();
+	std::shared_ptr<Task> task = tasks[event_id];
+	std::free(task->data);
 	tasks.erase(event_id);
 	tasks_mutex.unlock();
-}
-extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API getfunction_dispose_renderThread() {
-	return dispose_renderThread;
 }
