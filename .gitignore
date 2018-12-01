@@ -1,1 +1,3 @@
-Plugin/build
+ManagedPlugin/obj
+ManagedPlugin/bin
+UnityExampleProject/test.png
