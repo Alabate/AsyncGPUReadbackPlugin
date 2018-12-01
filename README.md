@@ -3,9 +3,9 @@ On Unity 2018.2 was introduced a really neat feature: being able get a frame fro
 
 However this feature is only available on platform supporting DirectX (Windows) and Metal (Apple), but not OpenGL and it's not planned. (source: https://forum.unity.com/threads/graphics-asynchronous-gpu-readback-api.529901/#post-3487735).
 
-This plugin aim to provide this feature for OpenGL platform. It tries to match the official AsyncGPUReadback as closes as possible to let you easily switch between the plugin or the official API. Under the hood, it use the official API if the code is not executing on OpenGL.
+This plugin aim to provide this feature for OpenGL platform. It tries to match the official AsyncGPUReadback as closes as possible to let you easily switch between the plugin or the official API. Under the hood, it use the official API if available on the current platform.
 
-I create this plugin for a specific use case of running our Unity project under linux, so the plugin is only built for windows and the plugin API doen't provide all the feature that the official one does (like choosing mipIndex, the destination format, etc.), but if you need one of them, contact me, I will see what we can do.
+I created this plugin for a specific use case of running our Unity project under linux, so the plugin is only built for Linux and the plugin API doen't provide all the feature that the official one does (like callback, choosing mipIndex, the destination format, etc.), but if you need one of them, contact me, I will see what we can do.
 
 ## Use it
 ### Install
@@ -13,7 +13,7 @@ This plugin has two parts that you need to copy inside your project :
 
 * `libAsyncGPUReadbackPlugin.so`: It's the linux native plugin that talk directly to OpenGL.
   * Copy it from `NativePlugin/build/libAsyncGPUReadbackPlugin.so` to `/Assets/Plugins` in your project.
-* `AsyncGPUReadbackPlugin.dll`: It's the C# part of the plugin that interface with the C++ native plugin. (Yes that dll work under linux, it's just C# inside)
+* `AsyncGPUReadbackPlugin.dll`: It's the C# part of the plugin that interface with the C++ native plugin. (Yes, that dll work under linux, it's just C# inside)
   * Copy it from `ManagedPlugin/bin/Release/netstandard2.0/AsyncGPUReadbackPlugin.dll` to anywhere under your `/Assets` folder.
 
 ### The API
