@@ -65,7 +65,7 @@ Editor > Project Settings > Player > Other Settings > Scripting Runtime Version 
 ### Native plugin
 ```
 cd NativePlugin
-make # The makefile only work for windows, but you could add other target inside if you want
+make # The makefile only work for linux, but you could add other target inside if you want
 ```
 You can find the built file under
 ```
