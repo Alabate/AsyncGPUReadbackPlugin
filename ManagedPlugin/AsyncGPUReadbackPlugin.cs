@@ -91,7 +91,7 @@ namespace AsyncGPUReadbackPluginNs {
 				usePlugin = true;
 				int textureId = (int)(src.GetNativeTexturePtr());
 				this.eventId = makeRequest_mainThread(textureId, 0);
-				makeRequest_renderThread(this.eventId);
+				GL.IssuePluginEvent(getfunction_makeRequest_renderThread(), this.eventId);
 			}
 			else {
 				Debug.LogError("AsyncGPUReadback is not supported on your system.");

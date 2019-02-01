@@ -6,9 +6,13 @@
 #include "Unity/IUnityInterface.h"
 #include "Unity/IUnityGraphics.h"
 #include <iostream>
-#include <fstream>
-
 #include "TypeHelpers.hpp"
+
+#define DEBUG 1
+#ifdef DEBUG
+	#include <fstream>
+	#include <thread>
+#endif
 
 struct Task {
 	GLuint texture;
@@ -37,12 +41,55 @@ int next_event_id = 1;
 
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 
+
+
+
+#ifdef DEBUG
+std::ofstream logMain, logRender;
+
+/**
+ * @brief Debug log function. Log to /tmp/AsyncGPUReadbackPlugin.log
+ * 
+ * @param message 
+ */
+void logToFile(std::string message) {
+	std::ofstream outfile;
+	outfile.open("/tmp/AsyncGPUReadbackPlugin_main.log", std::ios_base::app);
+	outfile << "GL CALLBACK: " << message  << std::endl;
+	outfile.close();
+}
+
+/**
+ * OpenGL debug message callback
+ */
+void GLAPIENTRY DebugMessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam)
+{
+	if (type == GL_DEBUG_TYPE_ERROR) {
+		logRender << "GL CALLBACK: " << message  << std::endl;
+	}
+}
+#endif
+
 /**
  * Unity plugin load event
  */
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
     UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
+	#ifdef DEBUG
+		logMain.open("/tmp/AsyncGPUReadbackPlugin_main.log", std::ios_base::app);
+		logRender.open("/tmp/AsyncGPUReadbackPlugin_render.log", std::ios_base::app);
+
+		glEnable              ( GL_DEBUG_OUTPUT );
+		glDebugMessageCallback( DebugMessageCallback, 0 );
+	#endif
+
     unityInterfaces = unityInterfaces;
     graphics = unityInterfaces->Get<IUnityGraphics>();
         
@@ -186,7 +233,7 @@ extern "C" void UNITY_INTERFACE_API update_renderThread(int event_id) {
 	tasks_mutex.unlock();
 
 	// Do something only if initialized (thread safety)
-	if (!task->initialized) {
+	if (!task->initialized || task->done) {
 		return;
 	}
 
