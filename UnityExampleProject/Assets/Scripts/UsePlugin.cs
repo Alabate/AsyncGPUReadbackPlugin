@@ -32,7 +32,7 @@ public class UsePlugin : MonoBehaviour {
             else if (req.done)
             {
                 // Get data from the request when it's done
-                NativeArray<byte> buffer = req.GetData<byte>();
+                byte[] buffer = req.GetRawData();
 
                 // Save the image
                 Camera cam = GetComponent<Camera>();
@@ -63,7 +63,7 @@ public class UsePlugin : MonoBehaviour {
         }
     }
 
-    void SaveBitmap(NativeArray<byte> buffer, int width, int height)
+    void SaveBitmap(byte[] buffer, int width, int height)
     {
         Debug.Log("Write to file");
         var tex = new Texture2D(width, height, TextureFormat.RGBAHalf, false);

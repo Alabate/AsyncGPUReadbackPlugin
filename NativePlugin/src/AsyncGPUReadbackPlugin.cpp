@@ -232,6 +232,11 @@ extern "C" void UNITY_INTERFACE_API update_renderThread(int event_id) {
 	std::shared_ptr<Task> task = tasks[event_id];
 	tasks_mutex.unlock();
 
+	// Check if task has not been already deleted by main thread
+	if(task == nullptr) {
+		return;
+	}
+
 	// Do something only if initialized (thread safety)
 	if (!task->initialized || task->done) {
 		return;

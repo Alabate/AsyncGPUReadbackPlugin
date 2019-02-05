@@ -98,20 +98,23 @@ namespace AsyncGPUReadbackPluginNs {
 			}
 		}
 
-		public unsafe NativeArray<T> GetData<T>() where T : struct
+		public unsafe byte[] GetRawData()
 		{
 			if (usePlugin) {
+				// Get data from cpp plugin
 				void* ptr = null;
 				int length = 0;
 				getData_mainThread(this.eventId, ref ptr, ref length);
-				NativeArray<T> buffer = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(ptr, length, Allocator.Temp);
+
+				// Copy data to a buffer that we own and that will not be deleted
+				byte[] buffer = new byte[length];
+				Marshal.Copy(new IntPtr(ptr), buffer, 0, length);
 				bufferCreated = true;
-				NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref buffer, AtomicSafetyHandle.Create());
 
 				return buffer;
 			}
 			else {
-				return gpuRequest.GetData<T>();
+				return gpuRequest.GetData<byte>().ToArray();
 			}
 		}
 
